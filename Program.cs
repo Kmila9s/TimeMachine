@@ -7,6 +7,7 @@ class Program
     static async Task Main(string[] args)
     {
         Repositories.Timer timer = new();
+        timer.Start(null);
         Clock firstClock = new(true, 50), secondClock = new(false, 100);
         while (true)
         {

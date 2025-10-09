@@ -5,5 +5,13 @@
     <TargetFrameworks>net9.0;net9.0-android</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <AndroidUseAndroidX>true</AndroidUseAndroidX>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <GenerateRuntimeConfigDevFile>false</GenerateRuntimeConfigDevFile>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(TargetFramework)' == 'net9.0-android'">
+    <OutputType>Library</OutputType>
+    <UseAndroidX>true</UseAndroidX>
+  </PropertyGroup>
+
 </Project>

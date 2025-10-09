@@ -3,26 +3,38 @@ namespace TimeMachine.Repositories;
 
 public class Timer : IDisposable
 {
-    public TimeClock _clock = new();
+    private TimeClock _clock = new();
     public TimeSpan TimeElapsed { get; private set; }
-    public static event Action<bool>? OnPaused;
+    public double CurrentTick { get; private set; }
+    public static event Action<bool>? OnPaused, OnSimulationEnded;
     public volatile bool Paused = false;
-    private readonly CancellationTokenSource _cts = new();
-    private CancellationTokenSource _pauseCts = new();
+    private CancellationTokenSource _cts = new(), _pauseCts = new();
     public Timer()
     {
-        _ = Task.Run(Start, _cts.Token);
+
     }
-    private async Task Start()
+    public void Start(TimeSpan? Duration = null) => _ = Task.Run(() => StartSimulation(Duration), _cts.Token);
+    private async Task StartSimulation(TimeSpan? Duration)
     {
+        ulong maxTicks = 0;
+        if (Duration != null)
+        {
+            maxTicks = GetSimulationTicks(Duration.Value, _clock.Ns);
+        }
         while (!_cts.IsCancellationRequested)
         {
             if (!Paused)
             {
-                double totalNs = (ulong)_clock.Ns * _clock.Tick * (_clock.Multiplier > 0 ? _clock.Multiplier : 1);
-                double totalTicks = totalNs / 100.0;
-                TimeElapsed = TimeSpan.FromTicks((long)totalTicks);
+                CurrentTick = (ulong)_clock.Ns * _clock.Tick * (_clock.Multiplier > 0 ? _clock.Multiplier : 1);
+                TimeElapsed = GetTimeFromTicks((ulong)CurrentTick, _clock.Ns);
+                if (maxTicks != 0 && CurrentTick >= maxTicks)
+                {
+                    Pause();
+                    OnSimulationEnded?.Invoke(true);
+                }
+                Console.WriteLine(TimeElapsed);
                 _clock.Next();
+                await Task.Yield();
             }
             else
                 try
@@ -34,6 +46,28 @@ public class Timer : IDisposable
                     _pauseCts?.TryReset();
                 }
         }
+    }
+    public void Restart(TimeSpan? Duration)
+    {
+        _cts.Cancel();
+        _cts?.TryReset();
+        _cts = new();
+        Paused = false;
+        _pauseCts?.Cancel();
+        _pauseCts?.TryReset();
+        _pauseCts = new();
+        Paused = false;
+        _ = Task.Run(() => StartSimulation(Duration), _cts.Token);
+    }
+    public static ulong GetSimulationTicks(TimeSpan SimulationTime, int TickResolution)
+    {
+        double totalNs = SimulationTime.TotalSeconds * 1_000_000_000.0;
+        return (ulong)Math.Round(totalNs / TickResolution);
+    }
+    public static TimeSpan GetTimeFromTicks(ulong simTicks, int tickResolutionNs = 10)
+    {
+        double totalSeconds = simTicks * (ulong)tickResolutionNs / 1_000_000_000.0;
+        return TimeSpan.FromSeconds(totalSeconds);
     }
     public void Continue()
     {
