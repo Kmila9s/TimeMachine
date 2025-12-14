@@ -7,7 +7,7 @@ This module is a core component of **Kmila-9s**, a project officially titled "Ap
 **Author:** Ulrich Tamayo Daniel
 **Email:** dulricht1700@alumno.ipn.mx
 **Email 2:** danielulrichtamayo@gmail.com
-**Version:** 0.5.0
+**Version:** 0.5.1
 **Last Updated:** December 13, 2025
 
 ---
@@ -145,8 +145,23 @@ classDiagram
 
     class TimeClock {
         <<static>>
-        +Frequency : long
-        +Period : long
+        +NS_PER_TICK : int
+        +OnTickChanged : event
+        +ResetCounter : event
+    }
+
+    class Clock {
+        +Name : string
+        +State : bool
+        +Period : ulong
+        +OnStatusChanged : event
+        +Clock(bool, double, string)
+        +Tick(ulong)
+        +Dispose()
+    }
+
+    class Input {
+        +Name : string
     }
 
     class TimerState {
@@ -158,6 +173,8 @@ classDiagram
 
     Timer ..> TimeClock : Reads Constants
     Timer o-- TimerState : Uses
+    Clock ..> TimeClock : Subscribes to OnTickChanged
+    Clock ..|> IDisposable : implements
 ```
 
 ### 6.3. Sequence Diagram: Starting and Pausing
@@ -266,6 +283,19 @@ For example:
 The pause mechanism uses `Task.Delay(Timeout.Infinite)` with a cancellation token, allowing the simulation loop to efficiently wait without consuming CPU cycles.
 
 ## 9. Changelog
+
+### Version 0.5.1 (2025-12-13)
+
+#### Diagram Updates
+
+*   **Class Diagram (6.2)**: Updated to include all module classes:
+    *   Added `Clock` class with properties (Name, State, Period, OnStatusChanged) and methods (Tick, Dispose)
+    *   Added `Input` class (placeholder for simulation inputs)
+    *   Updated `TimeClock` to show actual static members (NS_PER_TICK, OnTickChanged, ResetCounter events)
+    *   Added relationship showing Clock subscribes to TimeClock.OnTickChanged
+    *   Added IDisposable implementation indicator for Clock
+
+---
 
 ### Version 0.5.0 (2025-12-13)
 
