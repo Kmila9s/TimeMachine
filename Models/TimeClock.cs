@@ -14,6 +14,9 @@ public class TimeClock : IDisposable
     /// Gets the number of times the Tick counter has overflowed. Used for very long simulations.
     /// </summary>
     public ulong Multiplier { get; private set; } = 0;
+    /// <summary>
+    /// Gets the tick resolution in nanoseconds. Defaults to 10 ns per tick.
+    /// </summary>
     public int Ns { get; private set; } = 10;
     /// <summary>
     /// Defines the resolution of the simulation, representing how many nanoseconds pass in a single tick.
@@ -27,6 +30,9 @@ public class TimeClock : IDisposable
     /// Event fired when the main tick counter overflows and resets to zero.
     /// </summary>
     public static event EventHandler<bool>? ResetCounter;
+    /// <summary>
+    /// Advances the simulation by one tick, firing <see cref="OnTickChanged"/>. Handles overflow by incrementing <see cref="Multiplier"/> and resetting.
+    /// </summary>
     public void Next()
     {
         Tick++;

@@ -7,8 +7,8 @@ This module is a core component of **Kmila-9s**, a project officially titled "Ap
 **Author:** Ulrich Tamayo Daniel
 **Email:** dulricht1700@alumno.ipn.mx
 **Email 2:** danielulrichtamayo@gmail.com
-**Version:** 0.5.1
-**Last Updated:** December 13, 2025
+**Version:** 1.14.1
+**Last Updated:** May 1, 2026
 
 ---
 
@@ -43,16 +43,19 @@ The module is built around a central `Timer` class that manages the simulation s
 
 *   **`Timer.cs`**: The core class of the module. It orchestrates the time simulation, running a loop in a background `Task`. It manages the simulation's state (e.g., `IsRunning`, `IsPaused`) and exposes methods (`Start`, `Pause`, etc.) to control its lifecycle. It uses a `CancellationTokenSource` for efficient pausing and stopping.
 
-*   **`TimeClock.cs`**: A static class that defines the fundamental properties of the simulation's clock. It holds constants for `Frequency` and `Period`, which determine how much simulated time passes with each tick. This allows for easy configuration of the clock's precision (e.g., nanoseconds).
+*   **`TimeClock.cs`**: The global simulation clock that provides the fundamental "tick" driving all time-based events. It tracks the current tick count, handles tick overflow for long simulations, and defines the time resolution constant (`NS_PER_TICK = 10` nanoseconds per tick). Fires `OnTickChanged` and `ResetCounter` static events.
+
+*   **`Clock.cs`**: Represents a single clock signal within the simulation. It subscribes to `TimeClock.OnTickChanged` events and toggles its state based on its frequency. Supports any frequency specified in MHz.
+
+*   **`Input.cs`**: A placeholder class for future implementation of simulation input handling. Currently holds only the input name.
 
 ### Core Data Models
 
-*   **`TimerState.cs`**: An enumeration (`enum`) that defines the possible states of the timer: `Stopped`, `Running`, and `Paused`. This is used internally to manage the simulation flow.
-
 *   **Events (`Action<T>`)**: The `Timer` class uses several `Action` delegates as events to communicate with other parts of the application:
-    *   `OnProgressAdvance`: Reports the simulation progress as a percentage.
+    *   `OnPaused` (static): Indicates that the simulation has been paused or resumed.
     *   `OnSimulationEnded`: Signals that a fixed-duration simulation has completed.
-    *   `OnPaused`: Indicates that the simulation has been paused or resumed.
+    *   `OnProgressAdvance`: Reports the simulation progress as a percentage.
+    *   `OnSimulationTick` (static): Fires on each simulation tick for delta cycle processing.
 
 ## 4. How to Use This Module
 
@@ -75,7 +78,8 @@ public class SimulationHost
         // 2. Subscribe to its events to receive updates.
         _timeMachine.OnProgressAdvance += (percent) => Console.WriteLine($"Progress: {percent}%");
         _timeMachine.OnSimulationEnded += (finished) => Console.WriteLine("Simulation Finished.");
-        _timeMachine.OnPaused += (isPaused) => Console.WriteLine(isPaused ? "Simulation Paused." : "Simulation Resumed.");
+        // Note: OnPaused and OnSimulationTick are static events on the Timer class
+        Timer.OnPaused += (isPaused) => Console.WriteLine(isPaused ? "Simulation Paused." : "Simulation Resumed.");
     }
 
     public void RunSimulation()
@@ -129,34 +133,44 @@ classDiagram
     direction LR
 
     class Timer {
-        -TimerState _state
+        -TimeClock _clock
         -CancellationTokenSource _cts
-        +IsRunning : bool
-        +IsPaused : bool
-        +CurrentTick : long
-        +OnProgressAdvance : Action~int~
+        -CancellationTokenSource _pauseCts
+        +TimeElapsed : TimeSpan
+        +CurrentTick : double
+        +Paused : volatile bool
+        +OnPaused : Action~bool~$
         +OnSimulationEnded : Action~bool~
-        +OnPaused : Action~bool~
+        +OnProgressAdvance : Action~double~
+        +OnSimulationTick : Action~ulong~$
         +Start(TimeSpan? duration)
         +Pause()
         +Continue()
         +Stop()
+        +Restart(TimeSpan? duration)
+        +Dispose()
+        +GetSimulationTicks(TimeSpan, int)$ ulong
+        +GetTimeFromTicks(ulong, int)$ TimeSpan
     }
 
     class TimeClock {
-        <<static>>
-        +NS_PER_TICK : int
-        +OnTickChanged : event
-        +ResetCounter : event
+        +Tick : ulong
+        +Multiplier : ulong
+        +Ns : int
+        +NS_PER_TICK : int$
+        +OnTickChanged : Action~ulong~$
+        +ResetCounter : EventHandler~bool~$
+        +Next()
+        +Reset()
+        +Dispose()
     }
 
     class Clock {
         +Name : string
         +State : bool
         +Period : ulong
-        +OnStatusChanged : event
+        +OnStatusChanged : EventHandler~bool~
         +Clock(bool, double, string)
-        +Tick(ulong)
         +Dispose()
     }
 
@@ -164,17 +178,11 @@ classDiagram
         +Name : string
     }
 
-    class TimerState {
-        <<enumeration>>
-        Stopped
-        Running
-        Paused
-    }
-
-    Timer ..> TimeClock : Reads Constants
-    Timer o-- TimerState : Uses
-    Clock ..> TimeClock : Subscribes to OnTickChanged
+    Timer o-- TimeClock : uses internally
+    Clock ..> TimeClock : subscribes to OnTickChanged
+    Timer ..|> IDisposable : implements
     Clock ..|> IDisposable : implements
+    TimeClock ..|> IDisposable : implements
 ```
 
 ### 6.3. Sequence Diagram: Starting and Pausing
@@ -204,10 +212,18 @@ sequenceDiagram
     User->>SimulationEngine: ClickPauseButton()
     SimulationEngine->>Timer: Pause()
     activate Timer
-    Timer->>BackgroundThread: _cts.Cancel()
+    Timer->>Timer: Paused = true
+    Timer-->>SimulationEngine: OnPaused(true)
     deactivate Timer
-    BackgroundThread-->>BackgroundThread: Loop terminates
-    deactivate BackgroundThread
+    BackgroundThread-->>BackgroundThread: Enters Task.Delay(Infinite, _pauseCts)
+
+    User->>SimulationEngine: ClickResumeButton()
+    SimulationEngine->>Timer: Continue()
+    activate Timer
+    Timer->>Timer: Paused = false, _pauseCts.Cancel()
+    Timer-->>SimulationEngine: OnPaused(false)
+    deactivate Timer
+    BackgroundThread-->>BackgroundThread: Resumes loop
 
 ```
 ### 6.4. Module Diagram
@@ -234,12 +250,10 @@ graph TD
             timeClockClass["TimeClock<br>/Models/TimeClock.cs"]
             clockModel["Clock Model<br>/Models/Clock.cs"]
             inputModel["Input Model<br>/Models/Input.cs"]
-            timerStateEnum["TimerState<br>[External]"]
             %% Edges at this level (grouped by source)
-            timerClass["Timer<br>/Repositories/Timer.cs"] -->|"Reads | Clock frequency and period"| timeClockClass["TimeClock<br>/Models/TimeClock.cs"]
-            timerClass["Timer<br>/Repositories/Timer.cs"] -->|"Uses | To manage individual clocks"| clockModel["Clock Model<br>/Models/Clock.cs"]
+            timerClass["Timer<br>/Repositories/Timer.cs"] -->|"Uses | Tick advancement and time resolution"| timeClockClass["TimeClock<br>/Models/TimeClock.cs"]
+            clockModel["Clock Model<br>/Models/Clock.cs"] -->|"Subscribes to | OnTickChanged events"| timeClockClass["TimeClock<br>/Models/TimeClock.cs"]
             timerClass["Timer<br>/Repositories/Timer.cs"] -->|"Uses | To manage simulation inputs"| inputModel["Input Model<br>/Models/Input.cs"]
-            timerClass["Timer<br>/Repositories/Timer.cs"] -->|"Uses | To manage its internal state"| timerStateEnum["TimerState<br>[External]"]
         end
         %% Edges at this level (grouped by source)
         controlPanel["Control Panel<br>[External]"] -->|"Controls | Starts, pauses, continues, and stops simulation time"| timerClass["Timer<br>/Repositories/Timer.cs"]
@@ -256,7 +270,6 @@ graph TD
 The following limitations exist in the current implementation:
 
 *   **Input Class Placeholder:** The `Input.cs` class is a placeholder with minimal implementation. Future versions will add properties for value, type, and time-based value changes.
-*   **TimerState Enum Mentioned but Not Used:** The README mentions a `TimerState` enum, but the actual implementation uses boolean flags (`Paused` property) instead.
 *   **Fixed Tick Delay:** The simulation loop uses a fixed 10ms delay between ticks, which may not be suitable for all simulation scenarios.
 *   **Thread Safety:** Only the `Paused` property is marked as `volatile`. Other fields may need synchronization for multi-threaded access.
 
@@ -283,6 +296,29 @@ For example:
 The pause mechanism uses `Task.Delay(Timeout.Infinite)` with a cancellation token, allowing the simulation loop to efficiently wait without consuming CPU cycles.
 
 ## 9. Changelog
+
+### Version 1.14.1 (2026-05-01)
+
+#### Documentation Verification
+
+*   **README.md**: Verified all class signatures, events, and behaviors against the current codebase. Confirmed:
+    *   `Timer` exposes `Start`, `Pause`, `Continue`, `Stop`, `Restart`, `Dispose`, plus `TimeElapsed`, `CurrentTick`, `Paused` (`volatile`), and the four events (`OnPaused` and `OnSimulationTick` are `static`; `OnSimulationEnded` and `OnProgressAdvance` are instance events).
+    *   `TimeClock.Next()` increments `Tick`, fires `OnTickChanged`, and rolls into `Multiplier` with `ResetCounter` on overflow. `NS_PER_TICK = 10` ns is unchanged.
+    *   `Clock` derives its half-period from `frequencyMHz` against `TimeClock.NS_PER_TICK`, subscribes to `OnTickChanged` and `ResetCounter`, and unsubscribes in `Dispose`.
+    *   `Input` remains a placeholder holding only `Name`.
+*   **Class diagram**: Marked `Paused` as `volatile bool` to match the field declaration.
+
+---
+
+### Version 0.5.2 (2026-02-21)
+
+#### Documentation Fixes
+
+*   **Clock.cs**: Added XML documentation for private members (`_halfPeriod`, `_currentTick`, `OnResetGlobalClock`)
+*   **README.md**: Fixed sequence diagram to accurately reflect pause/resume mechanism (uses `Paused` flag + `_pauseCts` token, not `_cts.Cancel()`)
+*   **README.md**: Fixed usage example to correctly reference `Timer.OnPaused` as a static event instead of instance event
+
+---
 
 ### Version 0.5.1 (2025-12-13)
 
@@ -316,4 +352,29 @@ The pause mechanism uses `Task.Delay(Timeout.Infinite)` with a cancellation toke
 *   **README.md**: Added version information, current limitations section, technical details section, and this changelog
 
 ---
-*Last Updated: December 13, 2025*
+
+### Version 1.14.0 (2026-04-19)
+
+*   **Build hygiene** — added `<NoWarn>` for the remaining XML-doc /
+    nullable-ref noise so the project builds warning-free alongside the
+    rest of the Kmila solution.
+*   No runtime behavior changes in this release; the TimeMachine clock
+    tick engine is stable and consumed unchanged by the hybrid
+    FPGA-default / per-project-override clock system added in
+    `Kmila.Shared.Services.SimulationParameters`.
+
+---
+
+## What's new in v1.15 (2 May 2026)
+
+- **Automated test runner (#6).** `Program.cs` was previously an interactive REPL that blocked on `Console.ReadLine()` and made the module impossible to validate non-interactively. Replaced with a 23-test runner exiting with code 0/1 based on pass/fail. Cases:
+  - 8 Clock semantics tests (period calculation at 50 / 100 MHz, initial state, toggle, frequency ratio, dispose unsubscribes from `OnTickChanged`).
+  - 4 TimeClock unit tests (Next, OnTickChanged, Reset, NS_PER_TICK constant).
+  - 8 Timer lifecycle tests (Start with finite duration, Pause stops advancement, Continue resumes, Stop resets, Restart, monotonic OnProgressAdvance).
+  - 3 stress tests (100 concurrent clocks, 50k tick run, 20 rapid Start/Stop cycles).
+- **Workstation GC** enabled at the project level (#7); peak RSS during the 23-test run is ~37 MB.
+
+Full release notes: [`../Documentacion/CHANGELOG_v1.15.md`](../Documentacion/CHANGELOG_v1.15.md).
+
+---
+*Last Updated: 2026-05-02*

@@ -18,7 +18,13 @@ public class Clock : IDisposable
     /// Gets the period of the clock in simulation ticks.
     /// </summary>
     public ulong Period { get; private set; }
+    /// <summary>
+    /// Half of the period in simulation ticks. Used to determine when the clock state should toggle.
+    /// </summary>
     private readonly ulong _halfPeriod;
+    /// <summary>
+    /// Tracks the next tick at which the clock should toggle its state.
+    /// </summary>
     private ulong _currentTick = 0;
     /// <summary>
     /// Event fired whenever the clock's state changes.
@@ -40,6 +46,11 @@ public class Clock : IDisposable
         TimeClock.OnTickChanged += Tick;
         TimeClock.ResetCounter += OnResetGlobalClock;
     }
+    /// <summary>
+    /// Handles the global clock overflow reset by resetting the internal tick counter to zero.
+    /// </summary>
+    /// <param name="sender">The source of the event (the <see cref="TimeClock"/> instance).</param>
+    /// <param name="reset">True if the global clock has been reset due to overflow.</param>
     private void OnResetGlobalClock(object? sender, bool reset)
     {
         if (reset)

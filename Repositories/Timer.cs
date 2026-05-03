@@ -33,6 +33,13 @@ public class Timer : IDisposable
     /// Event fired when the simulation progress percentage increases. The double payload is the new percentage.
     /// </summary>
     public event Action<double>? OnProgressAdvance;
+
+    /// <summary>
+    /// Event fired on each simulation tick for delta cycle processing.
+    /// The ulong payload is the current tick count.
+    /// </summary>
+    public static event Action<ulong>? OnSimulationTick;
+
     private int _lastPercent = 0;
 
     /// <summary>
@@ -84,6 +91,10 @@ public class Timer : IDisposable
                     break;
                 }
                 _clock.Next();
+
+                // Fire simulation tick event for delta cycle processing
+                OnSimulationTick?.Invoke((ulong)CurrentTick);
+
                 await Task.Delay(10);
             }
             else
