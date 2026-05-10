@@ -7,6 +7,11 @@ namespace TimeMachine.Repositories;
 /// </summary>
 public class Timer : IDisposable
 {
+    /// <summary>
+    /// Backing <see cref="TimeClock"/> instance used to advance simulated time.
+    /// Replaced on <see cref="Restart"/> and <see cref="Stop"/> so each run starts
+    /// from a clean tick counter.
+    /// </summary>
     private TimeClock _clock = new();
 
     /// <summary>
@@ -40,12 +45,21 @@ public class Timer : IDisposable
     /// </summary>
     public static event Action<ulong>? OnSimulationTick;
 
+    /// <summary>
+    /// Last integer percentage reported via <see cref="OnProgressAdvance"/>; used to
+    /// suppress duplicate notifications when the percentage has not changed.
+    /// </summary>
     private int _lastPercent = 0;
 
     /// <summary>
     /// Indicates whether the simulation is currently paused.
     /// </summary>
     public volatile bool Paused = false;
+    /// <summary>
+    /// Cancellation source for the simulation loop (<c>_cts</c>) and for the pause-wait
+    /// continuation (<c>_pauseCts</c>). Both are recreated by <see cref="Restart"/> /
+    /// <see cref="Stop"/> / <see cref="Continue"/> after being cancelled.
+    /// </summary>
     private CancellationTokenSource _cts = new(), _pauseCts = new();
 
     /// <summary>

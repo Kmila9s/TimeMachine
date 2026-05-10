@@ -88,6 +88,7 @@ class Program
 
     // ---- Clock tests -----------------------------------------------------
 
+    /// <summary>Verifies a 50 MHz <see cref="Clock"/> resolves to a 2-tick period (20 ns at 10 ns/tick).</summary>
     private static (bool, string) Test01_Clock50MHzPeriod()
     {
         using var c = new Clock(false, 50);
@@ -97,6 +98,7 @@ class Program
             : (false, $"expected Period=2, got {c.Period}");
     }
 
+    /// <summary>Verifies a 100 MHz <see cref="Clock"/> resolves to a 1-tick period (10 ns at 10 ns/tick).</summary>
     private static (bool, string) Test02_Clock100MHzPeriod()
     {
         using var c = new Clock(false, 100);
@@ -106,18 +108,21 @@ class Program
             : (false, $"expected Period=1, got {c.Period}");
     }
 
+    /// <summary>Verifies that a <see cref="Clock"/> created with <c>initialState=true</c> reports <c>State==true</c>.</summary>
     private static (bool, string) Test03_ClockInitialStateTrue()
     {
         using var c = new Clock(true, 50);
         return c.State ? (true, "") : (false, "expected initial State=true");
     }
 
+    /// <summary>Verifies that a <see cref="Clock"/> created with <c>initialState=false</c> reports <c>State==false</c>.</summary>
     private static (bool, string) Test04_ClockInitialStateFalse()
     {
         using var c = new Clock(false, 50);
         return !c.State ? (true, "") : (false, "expected initial State=false");
     }
 
+    /// <summary>Drives a <see cref="TimeClock"/> several ticks and verifies the subscribed <see cref="Clock"/> changes state at least once.</summary>
     private static (bool, string) Test05_ClockTogglesOnTick()
     {
         var tc = new TimeClock();
@@ -130,6 +135,7 @@ class Program
             : (false, "Clock state never changed");
     }
 
+    /// <summary>Verifies that a 50 MHz clock toggles roughly twice as often as a 25 MHz clock when both observe the same tick stream.</summary>
     private static (bool, string) Test06_ClockFrequencyRatio()
     {
         var tc = new TimeClock();
@@ -145,6 +151,7 @@ class Program
         return (true, "");
     }
 
+    /// <summary>Verifies that disposing a <see cref="Clock"/> unsubscribes it: subsequent ticks must not flip its state any further.</summary>
     private static (bool, string) Test07_ClockDisposeStopsToggling()
     {
         var tc = new TimeClock();
@@ -160,6 +167,7 @@ class Program
             : (false, $"clock kept ticking after Dispose: {flips} > {afterDispose}");
     }
 
+    /// <summary>Verifies that <see cref="TimeClock.Reset"/> does not throw and a downstream <see cref="Clock"/> survives the reset.</summary>
     private static (bool, string) Test08_ClockGlobalReset()
     {
         var tc = new TimeClock();
@@ -175,6 +183,7 @@ class Program
 
     // ---- TimeClock tests -------------------------------------------------
 
+    /// <summary>Verifies that <see cref="TimeClock.Next"/> advances the <c>Tick</c> counter by exactly 1.</summary>
     private static (bool, string) Test09_TimeClockNextIncrement()
     {
         var tc = new TimeClock();
@@ -185,6 +194,7 @@ class Program
             : (false, $"Tick did not advance: {before} -> {tc.Tick}");
     }
 
+    /// <summary>Verifies that <c>TimeClock.OnTickChanged</c> fires once per <see cref="TimeClock.Next"/> call.</summary>
     private static (bool, string) Test10_TimeClockOnTickFires()
     {
         var tc = new TimeClock();
@@ -198,6 +208,7 @@ class Program
             : (false, $"OnTickChanged fired {count} times, expected 5");
     }
 
+    /// <summary>Verifies that <see cref="TimeClock.Reset"/> zeroes the tick counter even after a non-trivial run.</summary>
     private static (bool, string) Test11_TimeClockResetClears()
     {
         var tc = new TimeClock();
@@ -208,6 +219,7 @@ class Program
             : (false, $"Tick not zero after Reset: {tc.Tick}");
     }
 
+    /// <summary>Pins the canonical resolution constant <c>TimeClock.NS_PER_TICK == 10</c> so it doesn't drift unnoticed.</summary>
     private static (bool, string) Test12_TimeClockNsPerTick()
     {
         return TimeClock.NS_PER_TICK == 10
@@ -217,6 +229,7 @@ class Program
 
     // ---- Timer tests -----------------------------------------------------
 
+    /// <summary>Verifies <see cref="Timer.GetSimulationTicks"/>: 1 ms at 10 ns/tick = 100 000 ticks.</summary>
     private static (bool, string) Test13_TimerSimTicks1ms()
     {
         var ticks = Timer.GetSimulationTicks(TimeSpan.FromMilliseconds(1), TimeClock.NS_PER_TICK);
@@ -226,6 +239,7 @@ class Program
             : (false, $"expected 100000 ticks, got {ticks}");
     }
 
+    /// <summary>Round-trips a <see cref="TimeSpan"/> through <see cref="Timer.GetSimulationTicks"/> and <see cref="Timer.GetTimeFromTicks"/>; drift must stay below 1 µs.</summary>
     private static (bool, string) Test14_TimerRoundTrip()
     {
         var t  = TimeSpan.FromMicroseconds(500);
@@ -236,6 +250,7 @@ class Program
             : (false, $"round-trip drift: {t} -> {t2}");
     }
 
+    /// <summary>Verifies a finite-duration <see cref="Timer"/> run fires <see cref="Timer.OnSimulationEnded"/> within a 2-second wall-clock budget.</summary>
     private static (bool, string) Test15_TimerFiniteDurationCompletes()
     {
         using var t = new Timer();
@@ -251,6 +266,7 @@ class Program
         return ended ? (true, "") : (false, "OnSimulationEnded never fired");
     }
 
+    /// <summary>Verifies that <see cref="Timer.Pause"/> halts <c>CurrentTick</c> advancement until <see cref="Timer.Continue"/> is called.</summary>
     private static (bool, string) Test16_TimerPauseStops()
     {
         using var t = new Timer();
@@ -267,6 +283,7 @@ class Program
             : (false, $"tick advanced while paused: {snapshot} -> {after}");
     }
 
+    /// <summary>Verifies that <see cref="Timer.Continue"/> resumes tick advancement after a <see cref="Timer.Pause"/>.</summary>
     private static (bool, string) Test17_TimerContinueResumes()
     {
         using var t = new Timer();
@@ -284,6 +301,7 @@ class Program
             : (false, $"tick did not resume: {beforeResume} -> {afterResume}");
     }
 
+    /// <summary>Verifies that <see cref="Timer.Stop"/> zeroes <c>CurrentTick</c> and resets transient state.</summary>
     private static (bool, string) Test18_TimerStopResets()
     {
         using var t = new Timer();
@@ -295,6 +313,7 @@ class Program
             : (false, $"CurrentTick not zero after Stop: {t.CurrentTick}");
     }
 
+    /// <summary>Verifies that <see cref="Timer.Restart"/> re-arms the simulation loop and the tick counter advances afresh.</summary>
     private static (bool, string) Test19_TimerRestart()
     {
         using var t = new Timer();
@@ -311,6 +330,7 @@ class Program
             : (false, $"Restart didn't keep ticking: first={first}, second={second}");
     }
 
+    /// <summary>Verifies that <see cref="Timer.OnProgressAdvance"/> reports a monotonically non-decreasing percentage.</summary>
     private static (bool, string) Test20_ProgressAdvanceMonotonic()
     {
         using var t = new Timer();
@@ -330,6 +350,7 @@ class Program
 
     // ---- Stress tests ----------------------------------------------------
 
+    /// <summary>Stress test: subscribe 100 <see cref="Clock"/> instances and drive 200 ticks; must complete without exception.</summary>
     private static (bool, string) Test21_StressManyClocks()
     {
         var tc = new TimeClock();
@@ -347,6 +368,7 @@ class Program
         }
     }
 
+    /// <summary>Stress test: drive 50 000 ticks against a single <see cref="Clock"/> without exception.</summary>
     private static (bool, string) Test22_StressLongTickRun()
     {
         var tc = new TimeClock();
@@ -355,6 +377,7 @@ class Program
         return (true, "");
     }
 
+    /// <summary>Stress test: 20 rapid <see cref="Timer"/> Start/Stop cycles must not leak threads or crash.</summary>
     private static (bool, string) Test23_StressRapidStartStop()
     {
         // Many Timer Start/Stop cycles must not leak threads or crash.
