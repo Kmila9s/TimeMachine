@@ -295,6 +295,52 @@ For example:
 
 The pause mechanism uses `Task.Delay(Timeout.Infinite)` with a cancellation token, allowing the simulation loop to efficiently wait without consuming CPU cycles.
 
+## 8.bis. Audit diagrams (2026-05-09)
+
+The audit identified that the timer state machine and the dual fast/interactive
+execution path were not depicted in the thesis diagrams. The block below is the
+canonical view; the same source lives in
+`Documentacion/TT1/diagrams/fig_5_11_11_state_timer.mmd`.
+
+### `fig_5_11_11_state_timer` — Timer state machine
+
+```mermaid
+stateDiagram-v2
+    [*] --> Idle
+    Idle --> Running : Start(Duration?)
+    Running --> Paused : Pause()<br/>OnPaused(true)
+    Paused --> Running : Continue()<br/>OnPaused(false), cancel _pauseCts
+    Running --> Stopped : Stop()<br/>cancel _cts
+    Paused --> Stopped : Stop()
+    Running --> Done : Duration alcanzada<br/>OnSimulationEnded
+    Stopped --> Idle : Reset interno
+    Done --> Idle : Reset interno
+
+    state Running {
+        [*] --> Tick
+        Tick --> EmitProgress : OnSimulationTick<br/>(consumido por DeltaCycleEngine)
+        EmitProgress --> Wait : Task.Delay(10ms)
+        Wait --> Tick : !Paused y !_cts cancelado
+    }
+
+    state Paused {
+        [*] --> AwaitResume : Task.Delay(Infinite, _pauseCts.Token)
+        AwaitResume --> [*] : token cancelado
+    }
+
+    note right of Running
+      DeltaCycleEngine.ConnectToTimeMachine()
+      subscribe a OnPaused (estatico)
+      para sincronizar pausa/resume.
+    end note
+
+    note left of Idle
+      Path dual:
+      - Fast: SimulationRunner sin TimeMachine.
+      - Interactivo: TimeMachine + DeltaCycleEngine.
+    end note
+```
+
 ## 9. Changelog
 
 ### Version 1.14.1 (2026-05-01)
