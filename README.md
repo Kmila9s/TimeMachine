@@ -8,7 +8,7 @@ This module is a core component of **Kmila-9s**, a project officially titled "Ap
 **Email:** dulricht1700@alumno.ipn.mx
 **Email 2:** danielulrichtamayo@gmail.com
 **Version:** 1.14.1
-**Last Updated:** May 1, 2026
+**Last Updated:** August 3, 2026
 
 ---
 
@@ -423,4 +423,4 @@ stateDiagram-v2
 Full release notes: [`../Documentacion/CHANGELOG_v1.15.md`](../Documentacion/CHANGELOG_v1.15.md).
 
 ---
-*Last Updated: 2026-05-02*
+*Last Updated: 2026-08-03*
