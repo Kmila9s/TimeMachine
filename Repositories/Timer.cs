@@ -165,7 +165,13 @@ public class Timer : IDisposable
     public void Stop()
     {
         _cts?.Cancel();
-        Task.Delay(500).Wait();
+        // Give the simulation loop up to 500 ms to observe cancellation and
+        // drain before we reset its state. On single-threaded Blazor WASM this
+        // synchronous block would freeze the one thread the sim loop runs on —
+        // a hard deadlock — and the cooperative cancel token is enough there,
+        // so skip the wait in the browser only. Server/MAUI behavior unchanged.
+        if (!OperatingSystem.IsBrowser())
+            Task.Delay(500).Wait();
         _pauseCts?.Cancel();
         _cts = new();
         _pauseCts = new();
