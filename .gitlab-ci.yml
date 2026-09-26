@@ -1,5 +1,10 @@
+include:
+  - project: 'kmila-9s/ci-templates'
+    file: '/auto-merge.yml'
+
 stages:
   - test
+  - merge
 unit-test:
     stage: test
     image: mcr.microsoft.com/dotnet/sdk:9.0
