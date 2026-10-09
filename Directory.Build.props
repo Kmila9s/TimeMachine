@@ -1,0 +1,15 @@
+<Project>
+
+  <!--
+    Kmila engine module — analyzer enablement for the CA warning-remediation
+    program. Enables the full .NET analyzer suite; the ruleset is curated in the
+    sibling .editorconfig. TreatWarningsAsErrors stays false during migration.
+  -->
+  <PropertyGroup>
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <AnalysisLevel>latest</AnalysisLevel>
+    <AnalysisMode>All</AnalysisMode>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+  </PropertyGroup>
+
+</Project>

@@ -10,6 +10,9 @@ This module is a core component of **Kmila-9s**, a project officially titled "Ap
 **Version:** 1.14.1
 **Last Updated:** August 3, 2026
 
+> **Docs sync 2026-09-24** — no functional change to this module this cycle; the
+> 2026-09-23 feature batch (v1.27.0) is **app-only** (see `App/Kmila/README.md` §19).
+
 ---
 
 ## 1. Project Overview

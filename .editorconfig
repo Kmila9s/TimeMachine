@@ -1,0 +1,82 @@
+# Kmila engine module — analyzer severity policy (CA remediation).
+# The full analyzer suite is enabled via Directory.Build.props. This curates the
+# ruleset for an INTERNAL VHDL engine library + console test-runner (consumed only
+# by the Kmila app, never published as a public library): rules that are
+# inappropriate or low-value for this project type are turned off here WITH a
+# documented rationale (a curated ruleset, not a blanket bug suppression).
+# Globalization (CA13xx, minus CA1308) and safe perf/cleanup rules stay as
+# warnings and are FIXED — gated so engine output stays byte-identical.
+
+root = true
+
+[*.cs]
+
+# --- Not a published library / not localized / not UI --------------------------
+dotnet_diagnostic.CA2007.severity = none   # ConfigureAwait: engine consumed only within Kmila's own hosts
+dotnet_diagnostic.CA1515.severity = none   # public types are the engine's API surface for the app
+dotnet_diagnostic.CA1303.severity = none   # console/diagnostic literals are not localized
+dotnet_diagnostic.CA1062.severity = none   # trusted in-repo callers; no external contract
+dotnet_diagnostic.CA1002.severity = none   # List<T>/collection exposure fine for internal models
+dotnet_diagnostic.CA2227.severity = none
+dotnet_diagnostic.CA1819.severity = none
+dotnet_diagnostic.CA1003.severity = none   # Action-based events are idiomatic here
+
+# --- VHDL-domain naming (underscores, keyword/type-like identifiers) ------------
+dotnet_diagnostic.CA1707.severity = none
+dotnet_diagnostic.CA1716.severity = none
+dotnet_diagnostic.CA1720.severity = none
+dotnet_diagnostic.CA1721.severity = none
+dotnet_diagnostic.CA1724.severity = none
+dotnet_diagnostic.CA1725.severity = none
+dotnet_diagnostic.CA1711.severity = none
+dotnet_diagnostic.CA1710.severity = none
+dotnet_diagnostic.CA1715.severity = none
+dotnet_diagnostic.CA1069.severity = none   # enum member sets are domain-defined
+dotnet_diagnostic.CA1034.severity = none
+dotnet_diagnostic.CA1054.severity = none
+dotnet_diagnostic.CA1055.severity = none
+dotnet_diagnostic.CA1056.severity = none
+dotnet_diagnostic.CA1064.severity = none
+
+# --- Intentional patterns / flow-analysis FPs / lifetime -----------------------
+dotnet_diagnostic.CA1031.severity = none   # defensive catch-all keeps parse/sim resilient
+dotnet_diagnostic.CA1508.severity = none   # flow analysis misreads defensive/lazy guards as dead
+dotnet_diagnostic.CA1001.severity = none   # long-lived gates/CTS released at process exit
+dotnet_diagnostic.CA2000.severity = none   # ownership transferred / stored for later disposal
+dotnet_diagnostic.CA1032.severity = none   # engine exceptions are internal, purpose-built ctors
+dotnet_diagnostic.CA2201.severity = none   # parse/synth errors use base Exception intentionally
+dotnet_diagnostic.CA1024.severity = none
+dotnet_diagnostic.CA1849.severity = none
+dotnet_diagnostic.CA1814.severity = none
+dotnet_diagnostic.CA1063.severity = none
+
+# --- Perf micro-opt not worth the churn / risk ---------------------------------
+dotnet_diagnostic.CA1848.severity = none   # LoggerMessage delegates
+dotnet_diagnostic.CA1845.severity = none   # span Substring rewrites
+dotnet_diagnostic.CA1869.severity = none   # JsonSerializerOptions caching (cold paths)
+dotnet_diagnostic.CA1016.severity = none   # assembly-version attribute managed by build, not source
+
+# --- Globalization: casing DIRECTION must not change ---------------------------
+# CA1308 (ToLowerInvariant -> ToUpperInvariant) would flip case; the engine
+# canonicalises VHDL identifiers to lower-case and compares to lower-case
+# literals, so lower-case canonicalisation is intentional. CA1862
+# (ToLower().Equals -> Equals(OrdinalIgnoreCase)) is behaviour-adjacent and
+# output-risky in the parse/synth core — left off. The rest of CA13xx (adding
+# Ordinal/InvariantCulture WITHOUT changing case direction) is kept and fixed.
+dotnet_diagnostic.CA1308.severity = none
+dotnet_diagnostic.CA1862.severity = none
+
+# --- More design/FP stragglers for an internal engine --------------------------
+dotnet_diagnostic.CA2254.severity = none   # interpolated log/diagnostic templates
+dotnet_diagnostic.CA2211.severity = none   # non-const visible static fields are intentional caches/config
+dotnet_diagnostic.CA1040.severity = none   # marker interfaces
+dotnet_diagnostic.CA1051.severity = none   # protected/visible fields in internal base types
+dotnet_diagnostic.CA1028.severity = none   # enum underlying-type sizing is deliberate
+dotnet_diagnostic.CA1008.severity = none   # enum zero-value naming is domain-defined
+dotnet_diagnostic.CA2225.severity = none   # operator friendly-name alternates unneeded internally
+dotnet_diagnostic.CA1815.severity = none   # value-type Equals/GetHashCode not needed for these structs
+# Variable.Value = Value re-invokes a TRANSFORMING setter (re-normalisation) — an
+# intentional idiom for the default datatype case, not a dead self-assignment.
+dotnet_diagnostic.CA2245.severity = none
+# Main parses CLI args with intentional default-on-failure (TryParse result unused).
+dotnet_diagnostic.CA1806.severity = none
