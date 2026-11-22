@@ -1,0 +1,9 @@
+name: Feature request / Propuesta
+description: Suggest an improvement / Sugiere una mejora
+labels: [enhancement]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What and why / Qué y por qué
+    validations: { required: true }

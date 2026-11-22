@@ -2,11 +2,16 @@ include:
   - project: 'kmila-9s/ci-templates'
     file: '/auto-merge.yml'
   - project: 'kmila-9s/ci-templates'
+    file: '/release.yml'
+  - project: 'kmila-9s/ci-templates'
+    file: '/commit-guard.yml'
+  - project: 'kmila-9s/ci-templates'
     file: '/downstream-fanout.yml'
 
 stages:
   - test
   - merge
+  - release
   - fanout
 unit-test:
     stage: test

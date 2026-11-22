@@ -1,0 +1,25 @@
+name: Bug report / Reporte de error
+description: Something behaves differently from VHDL or from GHDL / Algo se comporta distinto a VHDL o a GHDL
+labels: [bug]
+body:
+  - type: textarea
+    id: vhdl
+    attributes:
+      label: Minimal VHDL / VHDL mínimo
+      render: vhdl
+    validations: { required: true }
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected (GHDL output if you have it) / Esperado (salida de GHDL si la tienes)
+    validations: { required: true }
+  - type: textarea
+    id: actual
+    attributes:
+      label: What Kmila did / Lo que hizo Kmila
+    validations: { required: true }
+  - type: input
+    id: env
+    attributes:
+      label: Head and version / Cabeza y versión
+      placeholder: "web v3.1.6 · macOS · CLI ..."
